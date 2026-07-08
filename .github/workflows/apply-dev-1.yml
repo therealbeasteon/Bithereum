@@ -1,0 +1,50 @@
+name: apply-dev-1
+
+on:
+  push:
+    branches:
+      - dev-1
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev-1
+      - name: Apply exact parameter edits
+        shell: python
+        run: |
+          from pathlib import Path
+
+          chainparams = Path('src/kernel/chainparams.cpp')
+          text = chainparams.read_text()
+          replacements = {
+              '        pchMessageStart[0] = 0xfa;\n        pchMessageStart[1] = 0xbf;\n        pchMessageStart[2] = 0xb5;\n        pchMessageStart[3] = 0xda;\n        nDefaultPort = 18444;':
+              '        pchMessageStart[0] = 0xce;\n        pchMessageStart[1] = 0xe2;\n        pchMessageStart[2] = 0xc4;\n        pchMessageStart[3] = 0x16;\n        nDefaultPort = 19444;',
+              '        bech32_hrp = "bcrt";':
+              '        bech32_hrp = "bthrt";',
+          }
+          for old, new in replacements.items():
+              if old not in text:
+                  raise SystemExit(f'Expected text not found in {chainparams}: {old!r}')
+              text = text.replace(old, new, 1)
+          chainparams.write_text(text)
+
+          baseparams = Path('src/chainparamsbase.cpp')
+          text = baseparams.read_text()
+          text = text.replace('return std::make_unique<CBaseChainParams>("regtest", 18443);', 'return std::make_unique<CBaseChainParams>("regtest", 19443);')
+          baseparams.write_text(text)
+
+          Path('.github/workflows/apply-dev-1.yml').unlink()
+      - name: Commit patch
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/kernel/chainparams.cpp src/chainparamsbase.cpp .github/workflows/apply-dev-1.yml
+          git commit -m "Separate regtest identity values"
+          git push origin HEAD:dev-1
