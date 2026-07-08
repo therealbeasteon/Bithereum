@@ -37,6 +37,8 @@ The following values must be reviewed before any public network is attempted:
 - Replay-protection policy
 - Regtest/testnet/signet configuration
 
+See [Chain Identity Plan](CHAIN_IDENTITY.md).
+
 ## Programmable Output Research
 
 The future execution layer should be specified before implementation. Open questions include:
